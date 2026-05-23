@@ -80,6 +80,39 @@ jobs:
           fi
           echo "key_path=$key_path" >> "$GITHUB_OUTPUT"
 
+      - name: Set up signing keychain
+        env:
+          IOS_DIST_CERT_P12: ${{ secrets.IOS_DIST_CERT_P12 }}
+          IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          # Use a random password — this keychain only lives for one job
+          KEYCHAIN_PASS="$(openssl rand -hex 20)"
+
+          security create-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN_PATH"
+
+          # Decode and import the Apple Distribution certificate + private key
+          echo "$IOS_DIST_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" \
+            -P "$IOS_DIST_CERT_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+          # Allow codesign / xcodebuild to use the key without GUI prompts
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -k "$KEYCHAIN_PASS" \
+            "$KEYCHAIN_PATH"
+
+          # Put the temp keychain first in the search list
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+          # Confirm the certificate is visible to codesign
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
       - name: Run fastlane independent lane
         working-directory: apps/ios
         env:
@@ -92,6 +125,13 @@ jobs:
       - name: Cleanup ASC key
         if: always()
         run: rm -rf "$RUNNER_TEMP/asc-key"
+
+      - name: Cleanup signing keychain
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/build.keychain-db" || true
+          # Restore the default keychain search list
+          security list-keychains -d user -s login.keychain-db
 
       - name: Upload archive artifact (debug)
         if: always()
