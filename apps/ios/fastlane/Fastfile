@@ -454,6 +454,9 @@ platform :ios do
     # team ID and bundle IDs across all five targets.
     ENV["XCODE_XCCONFIG_FILE"] = signing_xcconfig
     begin
+      auth_flags = "-authenticationKeyPath \"#{ENV['ASC_KEY_PATH']}\" " \
+                   "-authenticationKeyID \"#{ENV['ASC_KEY_ID']}\" " \
+                   "-authenticationKeyIssuerID \"#{ENV['ASC_ISSUER_ID']}\""
       build_app(
         project: "OpenClaw.xcodeproj",
         scheme: "OpenClaw",
@@ -465,8 +468,8 @@ platform :ios do
         archive_path: archive_path,
         output_directory: output_directory,
         output_name: "OpenClaw-independent-#{build_number}.ipa",
-        xcargs: "-allowProvisioningUpdates",
-        export_xcargs: "-allowProvisioningUpdates",
+        xcargs: "-allowProvisioningUpdates #{auth_flags}",
+        export_xcargs: "-allowProvisioningUpdates #{auth_flags}",
         export_options: {
           signingStyle: "automatic"
         }
