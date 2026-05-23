@@ -21,7 +21,7 @@ jobs:
   build:
     name: Build + upload TestFlight
     if: github.repository == 'aahladky/openclaw'
-    runs-on: macos-latest
+    runs-on: macos-26
     timeout-minutes: 60
     env:
       OPENCLAW_DEVELOPMENT_TEAM: ${{ secrets.OPENCLAW_DEVELOPMENT_TEAM }}
