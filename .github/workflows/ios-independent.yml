@@ -45,7 +45,7 @@ jobs:
           ruby --version
 
       - name: Install XcodeGen
-        run: brew install xcodegen
+        run: brew install xcodegen swiftlint
 
       - name: Install Fastlane
         run: |
