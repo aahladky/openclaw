@@ -105,11 +105,13 @@ targets:
           OPENCLAW_PUSH_DISTRIBUTION: local
           OPENCLAW_PUSH_RELAY_BASE_URL: ""
           OPENCLAW_PUSH_APNS_ENVIRONMENT: sandbox
+          OPENCLAW_APS_ENVIRONMENT: development
         Release:
           OPENCLAW_PUSH_TRANSPORT: direct
           OPENCLAW_PUSH_DISTRIBUTION: local
           OPENCLAW_PUSH_RELAY_BASE_URL: ""
           OPENCLAW_PUSH_APNS_ENVIRONMENT: production
+          OPENCLAW_APS_ENVIRONMENT: production
     info:
       path: Sources/Info.plist
       properties:
