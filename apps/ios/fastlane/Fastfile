@@ -403,16 +403,14 @@ platform :ios do
       OPENCLAW_BUILD_VERSION = #{build_number}
     XCCONFIG
 
-    path = File.join(ios_root, "LocalSigning.xcconfig")
+    path = File.join(Dir.pwd, "LocalSigning.xcconfig")
     File.write(path, contents)
     UI.message("Wrote independent LocalSigning.xcconfig (team=#{team} app=#{app_id} build=#{build_number}).")
     path
   end
 
   def regenerate_independent_project!
-    Dir.chdir(ios_root) do
-      sh("xcodegen generate")
-    end
+    sh("xcodegen generate")
   end
 
   def resolve_independent_build_number
@@ -439,33 +437,31 @@ platform :ios do
     output_directory = File.join("build", "independent")
     archive_path = File.join(output_directory, "OpenClaw-independent-#{build_number}.xcarchive")
 
-    Dir.chdir(ios_root) do
-      build_app(
-        project: "OpenClaw.xcodeproj",
-        scheme: "OpenClaw",
-        configuration: "Release",
-        export_method: "app-store",
-        clean: true,
-        skip_profile_detection: true,
-        build_path: "build",
-        archive_path: archive_path,
-        output_directory: output_directory,
-        output_name: "OpenClaw-independent-#{build_number}.ipa",
-        xcargs: "-allowProvisioningUpdates",
-        export_xcargs: "-allowProvisioningUpdates",
-        export_options: {
-          signingStyle: "automatic"
-        }
-      )
+    build_app(
+      project: "OpenClaw.xcodeproj",
+      scheme: "OpenClaw",
+      configuration: "Release",
+      export_method: "app-store",
+      clean: true,
+      skip_profile_detection: true,
+      build_path: "build",
+      archive_path: archive_path,
+      output_directory: output_directory,
+      output_name: "OpenClaw-independent-#{build_number}.ipa",
+      xcargs: "-allowProvisioningUpdates",
+      export_xcargs: "-allowProvisioningUpdates",
+      export_options: {
+        signingStyle: "automatic"
+      }
+    )
 
-      upload_to_testflight(
-        api_key: api_key,
-        app_identifier: app_identifier,
-        ipa: lane_context[SharedValues::IPA_OUTPUT_PATH],
-        skip_waiting_for_build_processing: true,
-        uses_non_exempt_encryption: false
-      )
-    end
+    upload_to_testflight(
+      api_key: api_key,
+      app_identifier: app_identifier,
+      ipa: lane_context[SharedValues::IPA_OUTPUT_PATH],
+      skip_waiting_for_build_processing: true,
+      uses_non_exempt_encryption: false
+    )
 
     UI.success("Uploaded independent iOS build: app=#{app_identifier} build=#{build_number}")
   end
