@@ -1,0 +1,105 @@
+name: iOS Independent Build
+
+# Independent TestFlight build for the aahladky/openclaw fork using the user's
+# own Apple team and bundle IDs. Does NOT run on upstream pushes — gated to the
+# fork repo and the ios-independent branch (plus manual workflow_dispatch).
+
+on:
+  push:
+    branches:
+      - ios-independent
+  workflow_dispatch:
+
+concurrency:
+  group: ios-independent-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build + upload TestFlight
+    if: github.repository == 'aahladky/openclaw'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      OPENCLAW_DEVELOPMENT_TEAM: ${{ secrets.OPENCLAW_DEVELOPMENT_TEAM }}
+      OPENCLAW_APP_BUNDLE_ID: ${{ secrets.OPENCLAW_APP_BUNDLE_ID }}
+      OPENCLAW_SHARE_BUNDLE_ID: ${{ secrets.OPENCLAW_SHARE_BUNDLE_ID }}
+      OPENCLAW_ACTIVITY_WIDGET_BUNDLE_ID: ${{ secrets.OPENCLAW_ACTIVITY_WIDGET_BUNDLE_ID }}
+      OPENCLAW_WATCH_APP_BUNDLE_ID: ${{ secrets.OPENCLAW_WATCH_APP_BUNDLE_ID }}
+      OPENCLAW_WATCH_EXTENSION_BUNDLE_ID: ${{ secrets.OPENCLAW_WATCH_EXTENSION_BUNDLE_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Show toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          ruby --version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Install Fastlane
+        run: |
+          gem install fastlane --no-document
+          fastlane --version
+
+      - name: Write ASC API key to temp file
+        id: asc-key
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ASC_KEY_P8:-}" ]; then
+            echo "::error::ASC_KEY_P8 secret is empty"
+            exit 1
+          fi
+          key_dir="$RUNNER_TEMP/asc-key"
+          mkdir -p "$key_dir"
+          chmod 700 "$key_dir"
+          key_path="$key_dir/AuthKey_${ASC_KEY_ID}.p8"
+          # Accept either raw PEM content or base64-encoded content
+          if printf '%s' "$ASC_KEY_P8" | grep -q "BEGIN PRIVATE KEY"; then
+            printf '%s' "$ASC_KEY_P8" > "$key_path"
+          else
+            printf '%s' "$ASC_KEY_P8" | base64 --decode > "$key_path"
+          fi
+          chmod 600 "$key_path"
+          # Sanity check: must contain PEM header
+          if ! grep -q "BEGIN PRIVATE KEY" "$key_path"; then
+            echo "::error::Decoded ASC key does not look like a PEM private key"
+            exit 1
+          fi
+          echo "key_path=$key_path" >> "$GITHUB_OUTPUT"
+
+      - name: Run fastlane independent lane
+        working-directory: apps/ios
+        env:
+          ASC_KEY_PATH: ${{ steps.asc-key.outputs.key_path }}
+          INDEPENDENT_BUILD_NUMBER: ${{ github.run_number }}
+          FASTLANE_SKIP_UPDATE_CHECK: "1"
+          FASTLANE_DISABLE_COLORS: "1"
+        run: fastlane ios independent
+
+      - name: Cleanup ASC key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/asc-key"
+
+      - name: Upload archive artifact (debug)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-independent-archive
+          path: |
+            apps/ios/build/independent/*.xcarchive
+            apps/ios/build/independent/*.ipa
+          if-no-files-found: ignore
+          retention-days: 7
