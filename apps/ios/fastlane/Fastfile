@@ -469,7 +469,6 @@ platform :ios do
         output_directory: output_directory,
         output_name: "OpenClaw-independent-#{build_number}.ipa",
         xcargs: "-allowProvisioningUpdates #{auth_flags}",
-        export_xcargs: "-allowProvisioningUpdates #{auth_flags}",
         export_options: {
           signingStyle: "automatic"
         }
