@@ -459,23 +459,21 @@ platform :ios do
                    "-authenticationKeyIssuerID \"#{ENV['ASC_ISSUER_ID']}\""
 
       # Create/download App Store distribution profiles for all targets.
-      # Manual signingStyle requires profiles to exist; get_provisioning_profile
-      # creates them via the ASC API if they don't exist yet.
+      # WatchKit IDs are registered as iOS App IDs in the portal, so sigh's
+      # default ios platform works for all 5 targets.
       provisioning_profiles = {}
-      {
-        ENV["OPENCLAW_APP_BUNDLE_ID"]             => nil,
-        ENV["OPENCLAW_SHARE_BUNDLE_ID"]           => nil,
-        ENV["OPENCLAW_ACTIVITY_WIDGET_BUNDLE_ID"] => nil,
-        ENV["OPENCLAW_WATCH_APP_BUNDLE_ID"]       => "watchos",
-        ENV["OPENCLAW_WATCH_EXTENSION_BUNDLE_ID"] => "watchos",
-      }.each do |bid, platform|
-        opts = {
+      [
+        ENV["OPENCLAW_APP_BUNDLE_ID"],
+        ENV["OPENCLAW_SHARE_BUNDLE_ID"],
+        ENV["OPENCLAW_ACTIVITY_WIDGET_BUNDLE_ID"],
+        ENV["OPENCLAW_WATCH_APP_BUNDLE_ID"],
+        ENV["OPENCLAW_WATCH_EXTENSION_BUNDLE_ID"],
+      ].each do |bid|
+        get_provisioning_profile(
           api_key: lane_context[SharedValues::APP_STORE_CONNECT_API_KEY],
           app_identifier: bid,
           readonly: false,
-        }
-        opts[:platform] = platform if platform
-        get_provisioning_profile(**opts)
+        )
         provisioning_profiles[bid] = lane_context[SharedValues::SIGH_UUID]
       end
 
