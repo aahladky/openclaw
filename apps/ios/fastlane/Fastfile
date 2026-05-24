@@ -473,6 +473,7 @@ platform :ios do
           method: "app-store",
           teamID: ENV["OPENCLAW_DEVELOPMENT_TEAM"],
           signingCertificate: "Apple Distribution",
+          signingStyle: "manual",
         }
       )
 
