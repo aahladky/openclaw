@@ -461,7 +461,7 @@ platform :ios do
         project: "OpenClaw.xcodeproj",
         scheme: "OpenClaw",
         configuration: "Release",
-        export_method: "app-store-connect",
+        export_method: "app-store",
         clean: true,
         skip_profile_detection: true,
         build_path: "build",
@@ -470,7 +470,9 @@ platform :ios do
         output_name: "OpenClaw-independent-#{build_number}.ipa",
         xcargs: "-allowProvisioningUpdates #{auth_flags}",
         export_options: {
-          signingStyle: "automatic"
+          method: "app-store",
+          teamID: ENV["OPENCLAW_DEVELOPMENT_TEAM"],
+          signingCertificate: "Apple Distribution",
         }
       )
 
